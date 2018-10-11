@@ -23,22 +23,15 @@
   }
 )
 
-(defn getQueryParameter [queryString key]
-  (def parameters (string/split queryString #"&"))
-  (def params {"hh" 6})
-  (loop [i 0]
-    (def pp (string/split (get parameters i) #"="))
-    (def kk (get pp 0))
-    (def value (get pp 1))
-    (assoc params :kk "value")
-    (println params)
-    (println "KEY " kk " VALUE " value)
-    (if (= i (count parameters))
-      (recur (inc i))
-    )
-  )
-  (println (str params))
-  (get params key)
+(defn error [code message]
+  (def body {code message})
+  (json/write-str body)
+)
+
+(defn getSportById [id]
+  (def result (sql/query mysql-db
+    ["select * from sports where sportId = ?" id]))
+  (json/write-str result)
 )
 ; -----------------------
 
@@ -50,12 +43,10 @@
 )
 
 (defn getSport [queryString]
-  (def param (getQueryParameter queryString "id"))
-  (println param)
-  (def result (sql/query mysql-db
-    ["select * from sports where sportId = ?" param]))
-  (def formatted (json/write-str result))
-  (create-json-body formatted)
+  (def parameters (string/split queryString #"="))
+  (if (= (get parameters 0) "id")
+  (getSportById (get parameters 1))
+  (create-json-body (error "invalidParameter" "Invalid parameter key")))
 )
 
 (defn getSports []
@@ -75,8 +66,6 @@
 (defroutes request-handlers
   (GET "/users" req (getUsers req))
   (GET "/sports" request (onGetSports request))
-    ; (println (str request)))
-  ; (GET "/sports/:id" [req] (getSport req))
   ; (POST "/sports" [req] (addSport req))
   ; (PUT "/sports" [req] (updteSport req))
   ; (DELETE "/sports/" [req] (deleteSport req))
